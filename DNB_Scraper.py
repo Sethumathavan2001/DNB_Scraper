@@ -1,5 +1,5 @@
 import pandas as pd, random
-from time import sleep
+from time import sleep, time
 from bs4 import BeautifulSoup as bs
 import undetected_chromedriver as uc
 from selenium import webdriver
@@ -16,7 +16,7 @@ browser_count = 1
 def create_driver():
     global browser_count
 
-    if browser_count % 2:
+    if not browser_count % 2 and False:
         # 🦊 Firefox setup
         from selenium.webdriver.firefox.options import Options as FirefoxOptions
         options = FirefoxOptions()
@@ -46,6 +46,10 @@ def create_driver():
         # options.add_argument("--no-sandbox")
         # if proxy:
         #     options.add_argument(f'--proxy-server={proxy}')
+        options.add_argument(
+            "--user-agent=Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.5993.90 Safari/537.36"
+        )
+
         driver = uc.Chrome(options=options)
     browser_count+=1
 
@@ -76,16 +80,21 @@ def clearchrome():
     action.send_keys(Keys.TAB*5+Keys.ENTER).perform()
     # browser.save_screenshot("clearhistory.png")
     sleep(60)
-def check_page(driver, url, soup):
+def check_page(driver, url, soup, timeout=300):
+    global l
     if soup.find('h1').text == "Access Denied":
         print("Bloked... Changing Proxy")
         driver.quit()
+        df = pd.DataFrame(l)
+        df.to_excel(fr'Output\{i.text.strip()}_{int(time()*1000)}.xlsx',index=False)
+        l = []
+        sleep(timeout)
         driver = create_driver()
         sleep(3)
         driver.get(url)
         sleep(random.uniform(5,15))
         soup = bs(driver.page_source,'html.parser')
-        driver, soup = check_page(driver, url, soup)
+        driver, soup = check_page(driver, url, soup, timeout*2)
     return driver, soup
         
         
@@ -190,6 +199,7 @@ links = s1.findAll('a',{'class':'gridLink anchor-hover-none'})
 l = []
 #%%
 for i in links[1:]:
+    l = []
     print(i.text)
     if i.text.strip() != "Aerospace Product and Parts Manufacturing":
         continue
@@ -232,6 +242,6 @@ for i in links[1:]:
                     data = {"Category":i.text}|data
                     l.append(data)
             df = pd.DataFrame(l)
-            df.to_excel(f'{i.text.strip()}.xlsx',index=False)
+            df.to_excel(fr'Output\{i.text.strip()}_{int(time()*1000)}.xlsx',index=False)
             break
     break
